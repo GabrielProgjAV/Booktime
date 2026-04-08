@@ -87,7 +87,7 @@ Shift + F10
 
 * Registro de usuario con Firebase Authentication
 * Inicio de sesión
-* Recuperación de contraseña (Aún no)
+* Recuperación de contraseña 
 * Flujo de onboarding
 * Navegación con animaciones
 
