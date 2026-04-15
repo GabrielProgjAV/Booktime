@@ -32,6 +32,7 @@ import com.example.booktime.tadeo.views.OnboardingTimeScreen
 import com.example.booktime.tadeo.views.OnboardingGenreScreen
 import com.example.booktime.tadeo.views.RegisterScreen
 import kotlinx.coroutines.delay
+import com.example.booktime.tadeo.views.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,26 +43,26 @@ class MainActivity : ComponentActivity() {
         setContent {
             BooktimeTheme {
                 var currentScreen by remember { mutableStateOf("loading") }
-                
+
                 LaunchedEffect(Unit) {
-                    delay(3000) // Simulating loading for 3 seconds
+                    delay(3000)
                     currentScreen = "main"
                 }
-                
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFF4A5A6E)) // PrincipalMenu background for the whole app
+                        .background(Color(0xFF4A5A6E))
                 ) {
                     AnimatedContent(
                         targetState = currentScreen,
                         transitionSpec = {
                             if (targetState == "register" || targetState == "login" || targetState == "forgot_password" || targetState == "create_new_password" || targetState == "coming_soon" || targetState == "onboarding_time" || targetState == "onboarding_genre" || (initialState == "loading" && targetState == "main")) {
-                                // Pure slide in from right to left (forward)
+
                                 slideInHorizontally(animationSpec = tween(400)) { it }
                                     .togetherWith(slideOutHorizontally(animationSpec = tween(400)) { -it / 2 })
                             } else {
-                                // Pure slide in from left to right (backward)
+
                                 slideInHorizontally(animationSpec = tween(400)) { -it }
                                     .togetherWith(slideOutHorizontally(animationSpec = tween(400)) { it / 2 })
                             }
@@ -74,31 +75,46 @@ class MainActivity : ComponentActivity() {
                                 onLoginClick = { currentScreen = "login" },
                                 onRegisterClick = { currentScreen = "register" }
                             )
+
                             "register" -> RegisterScreen(
                                 onBackClick = { currentScreen = "main" },
                                 onRegisterSuccess = { currentScreen = "onboarding_time" }
                             )
+
                             "onboarding_time" -> OnboardingTimeScreen(
                                 onNext = { currentScreen = "onboarding_genre" }
                             )
+
                             "onboarding_genre" -> OnboardingGenreScreen(
                                 onFinish = { currentScreen = "coming_soon" }
                             )
+
                             "login" -> LoginScreen(
                                 onBackClick = { currentScreen = "main" },
                                 onForgotPasswordClick = { currentScreen = "forgot_password" },
                                 onLoginSuccess = { currentScreen = "coming_soon" }
                             )
+
                             "forgot_password" -> ForgotPasswordScreen(
                                 onBackClick = { currentScreen = "login" },
                                 onConfirmCodeClick = { currentScreen = "create_new_password" }
                             )
+
                             "create_new_password" -> CreateNewPasswordScreen(
                                 onBackClick = { currentScreen = "forgot_password" },
                                 onPasswordCreated = { currentScreen = "login" }
                             )
+
                             "coming_soon" -> ComingSoonScreen(
-                                onBackClick = { currentScreen = "main" }
+                                    onBackClick = { currentScreen = "main" },
+                            onSettingsClick = {
+                                currentScreen = "settings"
+                            }
+                                )
+
+                            "settings" -> SettingsScreen(
+                                onBackClick = { currentScreen = "coming_soon" },
+                                onAccountClick = {}
                             )
                         }
                     }

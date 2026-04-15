@@ -172,13 +172,33 @@ fun RegisterScreen(onBackClick: () -> Unit, onRegisterSuccess: () -> Unit) {
                                 if (task.isSuccessful) {
 
                                     val user = auth.currentUser
+                                    val uid = user?.uid ?: ""
+
                                     val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
                                         .setDisplayName(name)
                                         .build()
 
                                     user?.updateProfile(profileUpdates)
 
-                                    onRegisterSuccess()
+                                    //Guarda en firestore
+                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+                                    val userMap = mapOf(
+                                        "uid" to uid,
+                                        "name" to name,
+                                        "email" to email
+                                    )
+
+                                    db.collection("users").document(uid)
+                                        .set(userMap)
+                                        .addOnSuccessListener {
+                                            println("USUARIO GUARDADO EN FIRESTORE")
+                                            onRegisterSuccess()
+                                        }
+                                        .addOnFailureListener {
+                                            errorMessage = "Error guardando usuario en base de datos"
+                                            showErrorDialog = true
+                                        }
 
                                 } else {
                                     val exception = task.exception
@@ -188,7 +208,7 @@ fun RegisterScreen(onBackClick: () -> Unit, onRegisterSuccess: () -> Unit) {
                                             "Este correo ya está registrado."
                                         is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException ->
                                             "Correo inválido."
-                                        else -> "Error al registrar usuario"
+                                        else -> exception?.message ?: "Error desconocido"
                                     }
                                     showErrorDialog = true
                                 }
@@ -206,7 +226,7 @@ fun RegisterScreen(onBackClick: () -> Unit, onRegisterSuccess: () -> Unit) {
                 )
             ) {
 
-                // 👇 ESTE ES EL CAMBIO VISUAL
+
                 if (isLoading) {
                     CircularProgressIndicator(
                         color = Color.White,
