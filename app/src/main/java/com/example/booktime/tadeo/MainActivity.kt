@@ -48,20 +48,29 @@ class MainActivity : ComponentActivity() {
                 // Observar el estado de la sesión de forma reactiva
                 var currentUser by remember { mutableStateOf(auth.currentUser) }
 
+                // Evita que la navegación inicial de la pantalla de carga y el listener de
+                // abajo naveguen ambos al arrancar la app (navegación duplicada/competida).
+                // Solo se marca como "true" una vez que la pantalla de carga ya navegó.
+                var hasNavigatedFromLoading by remember { mutableStateOf(false) }
+
                 // Listener para cambios de estado de autenticación (Cierre de sesión global)
                 DisposableEffect(auth) {
                     val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
                         val user = firebaseAuth.currentUser
                         currentUser = user
-                        
+
                         if (user == null) {
-                            // Si el usuario cierra sesión, limpiamos TODO el stack y mandamos al Main
-                            navController.navigate(Screen.Main.route) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
+                            // Si el usuario cierra sesión, limpiamos TODO el stack y mandamos al Main.
+                            // Durante el arranque en frío, la navegación inicial la controla la
+                            // pantalla de carga; este listener solo navega tras ese primer arranque.
+                            if (hasNavigatedFromLoading) {
+                                navController.navigate(Screen.Main.route) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
                         } else {
-                            // Cuando un usuario inicia sesión o la app arranca con uno, 
+                            // Cuando un usuario inicia sesión o la app arranca con uno,
                             // aseguramos que se carguen sus ajustes y se programen sus alarmas.
                             settingsViewModel.loadSettings()
                         }
@@ -104,13 +113,16 @@ class MainActivity : ComponentActivity() {
                     ) {
                         LaunchedEffect(Unit) {
                             delay(2000)
-                            if (auth.currentUser != null) {
-                                navController.navigate(Screen.Books.route) {
-                                    popUpTo(Screen.Loading.route) { inclusive = true }
-                                }
-                            } else {
-                                navController.navigate(Screen.Main.route) {
-                                    popUpTo(Screen.Loading.route) { inclusive = true }
+                            if (!hasNavigatedFromLoading) {
+                                hasNavigatedFromLoading = true
+                                if (currentUser != null) {
+                                    navController.navigate(Screen.Books.route) {
+                                        popUpTo(Screen.Loading.route) { inclusive = true }
+                                    }
+                                } else {
+                                    navController.navigate(Screen.Main.route) {
+                                        popUpTo(Screen.Loading.route) { inclusive = true }
+                                    }
                                 }
                             }
                         }

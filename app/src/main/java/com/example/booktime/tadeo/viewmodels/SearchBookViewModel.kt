@@ -31,6 +31,7 @@ class SearchBookViewModel(application: Application) : AndroidViewModel(applicati
     var isLoading by mutableStateOf(false)
     var isSaving by mutableStateOf(false)
     var selectedBookId by mutableStateOf<String?>(null)
+    var saveError by mutableStateOf<String?>(null)
 
     fun onSearch() {
         if (query.isBlank()) return
@@ -55,6 +56,7 @@ class SearchBookViewModel(application: Application) : AndroidViewModel(applicati
 
         viewModelScope.launch {
             isSaving = true
+            saveError = null
             val newBook = Book(
                 id = selectedItem.id,
                 title = selectedItem.volumeInfo.title,
@@ -73,14 +75,15 @@ class SearchBookViewModel(application: Application) : AndroidViewModel(applicati
                         ?: "Sin descripción disponible"
             )
             try {
-                // 1. Guardar en SharedPreferences (antes Firebase Mock)
-                repository.saveBookToFirebase(getApplication(), userId, newBook)
-                
-
-
-                
-                onSuccess(newBook)
+                val saved = repository.saveBookToFirebase(getApplication(), userId, newBook)
+                if (saved) {
+                    onSuccess(newBook)
+                } else {
+                    saveError = "No se pudo guardar el libro. Inténtalo de nuevo."
+                    Log.e("SAVE_ERROR", "saveBookToFirebase devolvió false")
+                }
             } catch (e: Exception) {
+                saveError = "No se pudo guardar el libro: ${e.message}"
                 Log.e("SAVE_ERROR", e.message.toString())
             } finally {
                 isSaving = false

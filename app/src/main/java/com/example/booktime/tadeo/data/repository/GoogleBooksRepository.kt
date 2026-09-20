@@ -32,13 +32,15 @@ class GoogleBooksRepository {
     suspend fun search(query: String, apiKey: String) =
         api.searchBooks(query, apiKey)
 
-    suspend fun saveBookToFirebase(context: Context, userId: String, book: Book) {
-        try {
+    suspend fun saveBookToFirebase(context: Context, userId: String, book: Book): Boolean {
+        return try {
             firestore.collection("users").document(userId)
                 .collection("library").document(book.id)
                 .set(book).await()
+            true
         } catch (e: Exception) {
             e.printStackTrace()
+            false
         }
     }
 
@@ -54,13 +56,4 @@ class GoogleBooksRepository {
         }
     }
 }
-
-//Cosas para estudiar de IA
-
-/*Representación de Distancias
-Regresión Lineal Simple
-Regresión Lineal Múltiple
-Clasificador KNN: K-Nearest Neighbors
-Clasificador KNN: Proyecto Cáncer de Seno
-Clustering: K-Means*/
 
