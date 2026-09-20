@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -30,10 +31,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +82,18 @@ fun PdfReaderView(
     var showChat by remember { mutableStateOf(false) }
     var pdfContext by remember { mutableStateOf("") }
 
+    // Libera la memoria de los bitmaps de las páginas al salir de la pantalla.
+    val currentPdfPages = rememberUpdatedState(pdfPages)
+    DisposableEffect(Unit) {
+        onDispose {
+            currentPdfPages.value.forEach { bitmap ->
+                if (!bitmap.isRecycled) {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(bookId, userId) {
         if (userId != null) {
             val library = repository.getUserLibrary(context, userId)
@@ -87,7 +102,7 @@ fun PdfReaderView(
             book?.let { b ->
 
                 val isGooglePreview =
-                    b.fileUri.contains("google.com")
+                    isGoogleBooksUrl(b.fileUri)
 
                 val isRemotePdf =
                     b.fileUri.contains(".pdf") ||
@@ -203,7 +218,7 @@ fun PdfReaderView(
                 )
             } else {
                 val isGooglePreview =
-                    book?.fileUri?.contains("google.com") == true
+                    book?.fileUri?.let { isGoogleBooksUrl(it) } == true
 
                 if (isGooglePreview) {
                     GoogleBooksWebView(url = book!!.fileUri)
@@ -231,6 +246,7 @@ fun PdfReaderView(
             // Capa del Chat de IA
             if (showChat) {
                 ChatBottomSheet(
+                    bookId = book?.id ?: bookId,
                     bookTitle = book?.title ?: "Libro",
                     bookAuthor = book?.author ?: "Autor desconocido",
                     bookDescription = book?.description ?: "Sin descripción",
@@ -241,6 +257,21 @@ fun PdfReaderView(
                 )
             }
         }
+    }
+}
+
+/**
+ * Valida de forma estricta si una URL pertenece a Google (host exacto o subdominio),
+ * en lugar de un simple "contains" que podría coincidir con cualquier URL que
+ * contenga la cadena "google.com" en cualquier parte (por ejemplo, en un parámetro).
+ */
+private fun isGoogleBooksUrl(fileUri: String): Boolean {
+    return try {
+        val host = Uri.parse(fileUri).host ?: return false
+        host.equals("google.com", ignoreCase = true) ||
+            host.endsWith(".google.com", ignoreCase = true)
+    } catch (e: Exception) {
+        false
     }
 }
 
@@ -314,7 +345,9 @@ private suspend fun loadPdfPages(
                 uri,
                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("PdfReaderView", "No se pudo tomar el permiso persistente del URI: $uri", e)
+        }
 
         val pfd: ParcelFileDescriptor? = context.contentResolver.openFileDescriptor(uri, "r")
 
@@ -325,10 +358,13 @@ private suspend fun loadPdfPages(
             for (i in 0 until maxPages) {
                 val page = renderer.openPage(i)
 
+                // RGB_565 no necesita canal alfa para páginas de PDF y usa la mitad
+                // de memoria que ARGB_8888, lo que ayuda a evitar OutOfMemoryError
+                // al renderizar hasta 15 páginas a la vez.
                 val bitmap = Bitmap.createBitmap(
                     page.width,
                     page.height,
-                    Bitmap.Config.ARGB_8888
+                    Bitmap.Config.RGB_565
                 )
 
                 val canvas = android.graphics.Canvas(bitmap)

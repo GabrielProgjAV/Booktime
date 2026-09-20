@@ -25,7 +25,7 @@ object PdfTextExtractor {
             val stripper = PDFTextStripper()
 
             stripper.startPage = 1
-            stripper.endPage = 5
+            stripper.endPage = document.numberOfPages
 
             val text = stripper.getText(document)
 
