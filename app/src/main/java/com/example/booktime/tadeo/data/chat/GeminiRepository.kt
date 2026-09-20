@@ -51,6 +51,12 @@ interface GeminiApi {
 
 class GeminiRepository {
 
+    companion object {
+        // Prefix used to mark a response as an error so callers (e.g. ChatBottomSheet)
+        // can tell it apart from a real AI reply and style/handle it accordingly.
+        const val ERROR_PREFIX = "[ERROR_IA]"
+    }
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -67,8 +73,6 @@ class GeminiRepository {
 
     suspend fun ask(prompt: String): String {
         return try {
-
-            println("LLAMANDO A GEMINI...")
 
             val request = GeminiRequest(
                 contents = listOf(
@@ -95,7 +99,7 @@ class GeminiRepository {
 
         } catch (e: Exception) {
             e.printStackTrace()
-            return "Error real: ${e.message}"
+            return "$ERROR_PREFIX No se pudo obtener respuesta de la IA: ${e.message}"
         }
     }
 }

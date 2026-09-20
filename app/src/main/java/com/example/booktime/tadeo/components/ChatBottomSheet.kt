@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.example.booktime.tadeo.data.chat.GeminiRepository
-import kotlinx.coroutines.delay
 import com.example.booktime.tadeo.data.chat.ChatRepository
 import com.example.booktime.tadeo.data.model.ChatMessage
 import com.google.firebase.auth.FirebaseAuth
@@ -29,8 +28,110 @@ import com.example.booktime.tadeo.data.utils.PdfContextHelper
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
+
+// Tiempo mínimo entre peticiones a la IA para evitar exceder los límites de la API.
+// Se usa el mismo valor en el botón de prompts rápidos y en el botón de envío.
+private const val AI_REQUEST_COOLDOWN_MS = 5000L
+
+/**
+ * Construye el prompt de sistema que se envía a Gemini, compartido por el botón de
+ * prompts rápidos y el botón de envío para evitar duplicar este texto en ambos sitios.
+ */
+private fun buildSystemPrompt(
+    bookTitle: String,
+    bookAuthor: String,
+    bookDescription: String,
+    bookContext: String,
+    userQuestion: String
+): String = """
+Eres teemo AI, un asistente avanzado especializado en libros, lectura y análisis literario.
+
+CONTEXTO GENERAL:
+El usuario está interactuando contigo dentro de una aplicación de lectura llamada Booktime.
+
+LIBRO ACTUAL:
+Título: "$bookTitle"
+
+Autor:
+"$bookAuthor"
+
+Descripción del libro:
+"$bookDescription"
+CONTENIDO EXTRAÍDO DEL PDF:
+"$bookContext"
+OBJETIVO PRINCIPAL:
+Ayudar al usuario a comprender mejor el libro mediante:
+- resúmenes
+- análisis
+- explicación de personajes
+- temas principales
+- interpretación de capítulos
+- aclaración de dudas
+- análisis literario
+- apoyo académico relacionado con lectura
+
+REGLAS IMPORTANTES:
+- Prioriza siempre el contexto del libro actual.
+- Si conoces el libro, utiliza tu conocimiento para responder de manera útil.
+- Si la información del libro es limitada, responde de forma general sin inventar detalles específicos.
+- Nunca inventes hechos, personajes o eventos que no conozcas.
+- Si no tienes suficiente contexto, dilo de forma natural y educada.
+- Si la pregunta es ambigua, pide aclaración antes de responder.
+- Si el usuario hace una pregunta fuera del contexto de libros o lectura, responde amablemente:
+"No tengo suficiente contexto para responder eso. Solo puedo ayudarte con temas relacionados con libros y lectura."
+
+TEMAS QUE SÍ PUEDES RESPONDER:
+- libros
+- autores
+- literatura
+- análisis narrativo
+- géneros literarios
+- personajes
+- lectura
+- escritura
+- interpretación de historias
+- comprensión lectora
+
+TEMAS QUE DEBES EVITAR:
+- programación
+- hacking
+- deportes
+- política
+- noticias
+- salud médica
+- matemáticas complejas
+- temas ilegales
+- información peligrosa
+
+COMPORTAMIENTO:
+- Responde como un asistente profesional y amigable.
+- Usa un tono natural y claro.
+- Sé útil y directo.
+- Evita respuestas demasiado largas.
+- Mantén coherencia con la conversación.
+- Si el usuario se equivoca, corrígelo de forma amable.
+- Si no sabes algo, admítelo honestamente.
+- Evita repetir frases innecesarias.
+
+FORMATO DE RESPUESTA:
+- Máximo 8 líneas.
+- Usa párrafos cortos.
+- Explica de manera sencilla y entendible.
+- Prioriza claridad sobre complejidad.
+
+MANEJO DE ERRORES:
+- Si la pregunta no tiene suficiente información, pide más contexto.
+- Si el libro no es reconocido, intenta ayudar usando información general relacionada.
+- Si no puedes responder con seguridad, indícalo claramente.
+- Nunca generes información falsa solo para completar una respuesta.
+
+PREGUNTA DEL USUARIO:
+$userQuestion
+""".trimIndent()
+
 @Composable
 fun ChatBottomSheet(
+    bookId: String,
     bookTitle: String,
     bookAuthor: String,
     bookDescription: String,
@@ -62,7 +163,7 @@ fun ChatBottomSheet(
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
     LaunchedEffect(Unit) {
 
-        chatRepository.loadMessages(userId, bookTitle) {
+        chatRepository.loadMessages(userId, bookId) {
             messages = it
         }
     }
@@ -124,6 +225,12 @@ fun ChatBottomSheet(
                 items(messages) { message ->
 
                     val isUser = message.sender == "user"
+                    val isAiError = !isUser && message.text.startsWith(GeminiRepository.ERROR_PREFIX)
+                    val displayText = if (isAiError) {
+                        message.text.removePrefix(GeminiRepository.ERROR_PREFIX).trim()
+                    } else {
+                        message.text
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -146,10 +253,11 @@ fun ChatBottomSheet(
                                     )
                                 )
                                 .background(
-                                    if (isUser)
-                                        PrincipalMenu
-                                    else
-                                        Color(0xFF1F2937)
+                                    when {
+                                        isUser -> PrincipalMenu
+                                        isAiError -> Color(0xFF3F1D1D)
+                                        else -> Color(0xFF1F2937)
+                                    }
                                 )
                                 .padding(12.dp)
                         ) {
@@ -166,27 +274,29 @@ fun ChatBottomSheet(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = message.text,
-                                color = Color.White,
+                                text = displayText,
+                                color = if (isAiError) Color(0xFFFFA1A1) else Color.White,
                                 fontSize = 14.sp,
                                 lineHeight = 22.sp
                             )
-                            if (isLoading) {
+                        }
+                    }
+                }
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.Start
-                                ) {
+                if (isLoading) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
 
-                                    Text(
-                                        text = "Teemo AI está escribiendo...",
-                                        color = Color.LightGray,
-                                        fontSize = 13.sp
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Teemo AI está escribiendo...",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -208,7 +318,7 @@ fun ChatBottomSheet(
 
                                 val currentTime = System.currentTimeMillis()
 
-                                if (currentTime - lastRequestTime < 5000) {
+                                if (currentTime - lastRequestTime < AI_REQUEST_COOLDOWN_MS) {
                                     messages = messages + ChatMessage(
                                         "Espera unos segundos antes de volver a preguntar",
                                         "ai"
@@ -221,101 +331,27 @@ fun ChatBottomSheet(
                                 if (isLoading) return@launch
                                 isLoading = true
 
-                                delay(3000)
-
-                                val fullPrompt = """
-Eres teemo AI, un asistente avanzado especializado en libros, lectura y análisis literario.
-
-CONTEXTO GENERAL:
-El usuario está interactuando contigo dentro de una aplicación de lectura llamada Booktime.
-
-LIBRO ACTUAL:
-Título: "$bookTitle"
-
-Autor:
-"$bookAuthor"
-
-Descripción del libro:
-"$bookDescription"
-CONTENIDO EXTRAÍDO DEL PDF:
-"$pdfContext"
-OBJETIVO PRINCIPAL:
-Ayudar al usuario a comprender mejor el libro mediante:
-- resúmenes
-- análisis
-- explicación de personajes
-- temas principales
-- interpretación de capítulos
-- aclaración de dudas
-- análisis literario
-- apoyo académico relacionado con lectura
-
-REGLAS IMPORTANTES:
-- Prioriza siempre el contexto del libro actual.
-- Si conoces el libro, utiliza tu conocimiento para responder de manera útil.
-- Si la información del libro es limitada, responde de forma general sin inventar detalles específicos.
-- Nunca inventes hechos, personajes o eventos que no conozcas.
-- Si no tienes suficiente contexto, dilo de forma natural y educada.
-- Si la pregunta es ambigua, pide aclaración antes de responder.
-- Si el usuario hace una pregunta fuera del contexto de libros o lectura, responde amablemente:
-"No tengo suficiente contexto para responder eso. Solo puedo ayudarte con temas relacionados con libros y lectura."
-
-TEMAS QUE SÍ PUEDES RESPONDER:
-- libros
-- autores
-- literatura
-- análisis narrativo
-- géneros literarios
-- personajes
-- lectura
-- escritura
-- interpretación de historias
-- comprensión lectora
-
-TEMAS QUE DEBES EVITAR:
-- programación
-- hacking
-- deportes
-- política
-- noticias
-- salud médica
-- matemáticas complejas
-- temas ilegales
-- información peligrosa
-
-COMPORTAMIENTO:
-- Responde como un asistente profesional y amigable.
-- Usa un tono natural y claro.
-- Sé útil y directo.
-- Evita respuestas demasiado largas.
-- Mantén coherencia con la conversación.
-- Si el usuario se equivoca, corrígelo de forma amable.
-- Si no sabes algo, admítelo honestamente.
-- Evita repetir frases innecesarias.
-
-FORMATO DE RESPUESTA:
-- Máximo 8 líneas.
-- Usa párrafos cortos.
-- Explica de manera sencilla y entendible.
-- Prioriza claridad sobre complejidad.
-
-MANEJO DE ERRORES:
-- Si la pregunta no tiene suficiente información, pide más contexto.
-- Si el libro no es reconocido, intenta ayudar usando información general relacionada.
-- Si no puedes responder con seguridad, indícalo claramente.
-- Nunca generes información falsa solo para completar una respuesta.
-
-PREGUNTA DEL USUARIO:
-$prompt
-""".trimIndent()
+                                val fullPrompt = buildSystemPrompt(
+                                    bookTitle = bookTitle,
+                                    bookAuthor = bookAuthor,
+                                    bookDescription = bookDescription,
+                                    bookContext = pdfContext,
+                                    userQuestion = prompt
+                                )
 
                                 chatRepository.saveMessage(
                                     userId,
-                                    bookTitle,
+                                    bookId,
                                     ChatMessage(prompt, "user")
                                 )
 
                                 val response = gemini.ask(fullPrompt)
+
+                                chatRepository.saveMessage(
+                                    userId,
+                                    bookId,
+                                    ChatMessage(response, "ai")
+                                )
 
                                 messages = messages +
                                         ChatMessage(prompt, "user") +
@@ -377,7 +413,7 @@ $prompt
 
                             val currentTime = System.currentTimeMillis()
 
-                            if (currentTime - lastRequestTime < 8000) {
+                            if (currentTime - lastRequestTime < AI_REQUEST_COOLDOWN_MS) {
                                 messages = messages + ChatMessage(
                                     "Espera unos segundos antes de volver a preguntar",
                                     "ai"
@@ -390,111 +426,31 @@ $prompt
                             if (isLoading) return@launch
                             isLoading = true
 
-                            delay(3000)
                             val relevantContext =
                                 PdfContextHelper.getRelevantContext(
                                     pdfContext,
                                     text
                                 )
 
-                            val fullPrompt = """
-Eres teemo AI, un asistente avanzado especializado en libros, lectura y análisis literario.
-
-CONTEXTO GENERAL:
-El usuario está interactuando contigo dentro de una aplicación de lectura llamada Booktime.
-
-LIBRO ACTUAL:
-Título: "$bookTitle"
-
-Autor:
-"$bookAuthor"
-
-Descripción del libro:
-"$bookDescription"
-CONTENIDO EXTRAÍDO DEL PDF:
-"$relevantContext"
-
-OBJETIVO PRINCIPAL:
-Ayudar al usuario a comprender mejor el libro mediante:
-- resúmenes
-- análisis
-- explicación de personajes
-- temas principales
-- interpretación de capítulos
-- aclaración de dudas
-- análisis literario
-- apoyo académico relacionado con lectura
-
-REGLAS IMPORTANTES:
-- Prioriza siempre el contexto del libro actual.
-- Si conoces el libro, utiliza tu conocimiento para responder de manera útil.
-- Si la información del libro es limitada, responde de forma general sin inventar detalles específicos.
-- Nunca inventes hechos, personajes o eventos que no conozcas.
-- Si no tienes suficiente contexto, dilo de forma natural y educada.
-- Si la pregunta es ambigua, pide aclaración antes de responder.
-- Si el usuario hace una pregunta fuera del contexto de libros o lectura, responde amablemente:
-"No tengo suficiente contexto para responder eso. Solo puedo ayudarte con temas relacionados con libros y lectura."
-
-TEMAS QUE SÍ PUEDES RESPONDER:
-- libros
-- autores
-- literatura
-- análisis narrativo
-- géneros literarios
-- personajes
-- lectura
-- escritura
-- interpretación de historias
-- comprensión lectora
-
-TEMAS QUE DEBES EVITAR:
-- programación
-- hacking
-- deportes
-- política
-- noticias
-- salud médica
-- matemáticas complejas
-- temas ilegales
-- información peligrosa
-
-COMPORTAMIENTO:
-- Responde como un asistente profesional y amigable.
-- Usa un tono natural y claro.
-- Sé útil y directo.
-- Evita respuestas demasiado largas.
-- Mantén coherencia con la conversación.
-- Si el usuario se equivoca, corrígelo de forma amable.
-- Si no sabes algo, admítelo honestamente.
-- Evita repetir frases innecesarias.
-
-FORMATO DE RESPUESTA:
-- Máximo 8 líneas.
-- Usa párrafos cortos.
-- Explica de manera sencilla y entendible.
-- Prioriza claridad sobre complejidad.
-
-MANEJO DE ERRORES:
-- Si la pregunta no tiene suficiente información, pide más contexto.
-- Si el libro no es reconocido, intenta ayudar usando información general relacionada.
-- Si no puedes responder con seguridad, indícalo claramente.
-- Nunca generes información falsa solo para completar una respuesta.
-
-PREGUNTA DEL USUARIO:
-    $text
-""".trimIndent()
+                            val fullPrompt = buildSystemPrompt(
+                                bookTitle = bookTitle,
+                                bookAuthor = bookAuthor,
+                                bookDescription = bookDescription,
+                                bookContext = relevantContext,
+                                userQuestion = text
+                            )
 
                             val response = gemini.ask(fullPrompt)
 
                             chatRepository.saveMessage(
                                 userId,
-                                bookTitle,
+                                bookId,
                                 ChatMessage(text, "user")
                             )
 
                             chatRepository.saveMessage(
                                 userId,
-                                bookTitle,
+                                bookId,
                                 ChatMessage(response, "ai")
                             )
 

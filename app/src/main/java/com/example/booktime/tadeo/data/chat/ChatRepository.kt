@@ -1,5 +1,6 @@
 package com.example.booktime.tadeo.data.chat
 
+import android.util.Log
 import com.example.booktime.tadeo.data.model.ChatMessage
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -19,6 +20,9 @@ class ChatRepository {
             .document(bookId)
             .collection("messages")
             .add(message)
+            .addOnFailureListener { e ->
+                Log.e("ChatRepository", "Error al guardar el mensaje", e)
+            }
     }
 
     fun loadMessages(
@@ -41,6 +45,10 @@ class ChatRepository {
                 }
 
                 onResult(messages)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ChatRepository", "Error al cargar los mensajes", e)
+                onResult(emptyList())
             }
     }
 }
