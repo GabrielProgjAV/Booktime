@@ -1,4 +1,7 @@
 📚 Booktime AI
+
+**Versión 1.0.0 — Estable**
+
 Aplicación Android desarrollada con Jetpack Compose que integra inteligencia artificial con Gemini para mejorar la experiencia de lectura de libros PDF.
 
 La aplicación permite:
