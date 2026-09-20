@@ -40,7 +40,6 @@ class AuthViewModel : ViewModel() {
         
         viewModelScope.launch {
             try {
-                Log.d("AuthViewModel", "Login: Intentando con $email")
                 // Aseguramos que Firebase esté listo
                 val firebaseAuth = auth 
                 
@@ -97,8 +96,6 @@ class AuthViewModel : ViewModel() {
 
         _isLoading.value = true
         _errorMessage.value = null
-        Log.d("AuthViewModel", ">>> INICIANDO PROCESO DE REGISTRO <<<")
-        Log.d("AuthViewModel", "Email: $email")
 
         viewModelScope.launch {
             try {
@@ -109,17 +106,10 @@ class AuthViewModel : ViewModel() {
                     return@launch
                 }
 
-                Log.d("AuthViewModel", "Paso 1: Intentando crear usuario en Firebase Auth...")
-                
-                // Verificamos si hay conectividad básica (opcional, pero ayuda)
-                Log.d("AuthViewModel", "Verificando instancia de Firebase: ${firebaseAuth.app.name}")
-
                 // 1. Crear usuario con Timeout reducido para detectar fallos de red más rápido
                 val authResult = withTimeoutOrNull(15000) {
                     try {
-                        Log.d("AuthViewModel", "Llamando a createUserWithEmailAndPassword...")
                         val task = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-                        Log.d("AuthViewModel", "Task completada con éxito")
                         task
                     } catch (e: Exception) {
                         Log.e("AuthViewModel", "EXCEPCIÓN DENTRO DE CREATEUSER: ${e.message}")
@@ -135,17 +125,12 @@ class AuthViewModel : ViewModel() {
 
                 val user = authResult.user
                 if (user != null) {
-                    Log.d("AuthViewModel", "Paso 2: Usuario creado (UID: ${user.uid}). Actualizando perfil...")
-                    
                     // 2. Actualizar Perfil
                     try {
                         val profileUpdates = UserProfileChangeRequest.Builder()
                             .setDisplayName(name)
                             .build()
                         user.updateProfile(profileUpdates).await()
-                        Log.d("AuthViewModel", "Perfil actualizado correctamente.")
-                        
-                        Log.d("AuthViewModel", ">>> REGISTRO COMPLETADO EXITOSAMENTE <<<")
                         onSuccess()
                     } catch (e: Exception) {
                         Log.e("AuthViewModel", "Error al actualizar perfil: ${e.message}")
@@ -166,7 +151,6 @@ class AuthViewModel : ViewModel() {
                     else -> "Fallo al registrar: ${e.localizedMessage ?: "Error desconocido"}"
                 }
             } finally {
-                Log.d("AuthViewModel", "Finalizando estado de carga (isLoading = false)")
                 _isLoading.value = false
             }
         }
