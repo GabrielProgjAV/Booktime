@@ -110,6 +110,10 @@ The app includes:
 - Spam limiting
 - Out-of-context response handling
 
+## ⚠️ Known Limitations
+
+- API keys (Gemini, Google Books) are currently embedded client-side via `BuildConfig` rather than proxied through a backend. This is a known simplification appropriate for a student/portfolio project, but it is **not production-grade**: a client-side key can be extracted from the compiled APK. For a production deployment, these calls should be proxied through a backend (e.g. a Cloud Function) with key restrictions (allowed referrers/package name, quota limits) so the raw API keys never ship inside the app.
+
 ## 📌 Possible Future Improvements
 
 - AI response streaming

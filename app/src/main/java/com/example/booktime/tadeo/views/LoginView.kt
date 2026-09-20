@@ -6,11 +6,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.example.booktime.tadeo.R
 import com.example.booktime.tadeo.components.BooktimeButton
 import com.example.booktime.tadeo.components.BooktimeTextField
 import com.example.booktime.tadeo.components.ScreenWrapper
@@ -25,12 +27,16 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    val errorEmptyFields = "Por favor, completa todos los campos."
-    val errorInvalidEmail = "Por favor, ingresa un correo electrónico válido."
+    val errorEmptyFields = stringResource(id = R.string.error_empty_fields)
+    val errorInvalidEmail = stringResource(id = R.string.error_invalid_email)
+    val errorTitle = stringResource(id = R.string.error_title)
+    val errorUserNotFound = stringResource(id = R.string.error_user_not_found)
+    val errorWrongPassword = stringResource(id = R.string.error_wrong_password)
+    val errorLoginGeneric = stringResource(id = R.string.error_login_generic)
 
     if (showErrorDialog) {
         AnimatedDialog(
-            title = "Error",
+            title = errorTitle,
             text = errorMessage,
             onDismiss = { showErrorDialog = false }
         )
@@ -38,7 +44,7 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
 
     ScreenWrapper(onBackClick = onBackClick) {
         Text(
-            text = "Iniciar Sesión",
+            text = stringResource(id = R.string.login_title),
             style = MaterialTheme.typography.headlineLarge,
             color = Color.White,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -47,14 +53,14 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
         BooktimeTextField(
             value = email,
             onValueChange = { email = it },
-            placeholder = "Correo electrónico",
+            placeholder = stringResource(id = R.string.email_placeholder),
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
         BooktimeTextField(
             value = password,
             onValueChange = { password = it },
-            placeholder = "Contraseña",
+            placeholder = stringResource(id = R.string.password_placeholder),
             modifier = Modifier.padding(bottom = 8.dp),
             visualTransformation = PasswordVisualTransformation(),
         )
@@ -64,7 +70,7 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
             modifier = Modifier.align(Alignment.End)
         ) {
             Text(
-                text = "¿Olvidaste tu contraseña?",
+                text = stringResource(id = R.string.forgot_password_link),
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -73,7 +79,7 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
         Spacer(modifier = Modifier.height(24.dp))
 
         BooktimeButton(
-            text = "Entrar",
+            text = stringResource(id = R.string.login_button),
             isLoading = isLoading,
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
@@ -92,9 +98,9 @@ fun LoginScreen(onBackClick: () -> Unit, onForgotPasswordClick: () -> Unit, onLo
                             } else {
                                 val exception = task.exception
                                 errorMessage = when (exception) {
-                                    is FirebaseAuthInvalidUserException -> "El usuario no existe."
-                                    is FirebaseAuthInvalidCredentialsException -> "Contraseña incorrecta."
-                                    else -> "Error al iniciar sesión: ${exception?.message}"
+                                    is FirebaseAuthInvalidUserException -> errorUserNotFound
+                                    is FirebaseAuthInvalidCredentialsException -> errorWrongPassword
+                                    else -> errorLoginGeneric.format(exception?.message)
                                 }
                                 showErrorDialog = true
                             }
