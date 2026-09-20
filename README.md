@@ -1,108 +1,128 @@
-📚 Booktime AI
+# 📚 Booktime AI
 
-**Versión 1.0.0 — Estable**
+**Version 1.0.0 — Stable**
 
-Aplicación Android desarrollada con Jetpack Compose que integra inteligencia artificial con Gemini para mejorar la experiencia de lectura de libros PDF.
+An Android application built with Jetpack Compose that integrates AI (Gemini) to enhance the PDF book-reading experience.
 
-La aplicación permite:
+The app allows users to:
 
-Leer PDFs dentro de la app
-Chatear con una IA contextual
-Obtener resúmenes y análisis
-Guardar historial de conversaciones
-Extraer texto del PDF automáticamente
-Responder usando contexto real del libro
-🚀 Tecnologías utilizadas
-Frontend
-Kotlin
-Jetpack Compose
-Material 3
-Backend / Servicios
-Firebase Firestore
-Firebase Authentication
-Gemini API
-IA
-Prompt Engineering
-Context Injection
-Mini-RAG básico
-PDFs
-PdfRenderer
-PDFBox Android
-🧠 Funcionamiento de la IA
-La IA utiliza Gemini API para generar respuestas relacionadas con el libro que el usuario está leyendo.
+- Read PDFs inside the app
+- Chat with a context-aware AI
+- Get summaries and analysis
+- Save conversation history
+- Automatically extract text from the PDF
+- Get answers grounded in the actual content of the book
 
-El sistema:
+## 🚀 Tech Stack
 
-Extrae texto del PDF
-Busca fragmentos relevantes según la pregunta del usuario
-Envía contexto específico a Gemini
-Genera respuestas contextualizadas
-Esto permite respuestas más precisas y evita respuestas genéricas.
+**Frontend**
+- Kotlin
+- Jetpack Compose
+- Material 3
 
-📄 Funcionalidades principales
-✅ Lector PDF
-Renderizado de páginas
-Scroll vertical
-Carga optimizada de páginas
-✅ Chat IA
-Preguntas personalizadas
-Resumen automático
-Explicación de personajes
-Temas principales
-✅ Historial persistente
-Conversaciones guardadas en Firebase
-Recuperación automática del historial
-✅ Mini-RAG
-Búsqueda básica de fragmentos relevantes
-Contexto dinámico según la pregunta
-✅ UI moderna
-Diseño dark mode
-Burbujas de chat
-Auto scroll
-Componentes Material 3
-🔥 Arquitectura general
-ChatBottomSheet
-Maneja:
+**Backend / Services**
+- Firebase Firestore
+- Firebase Authentication
+- Gemini API
 
-interfaz del chat
-prompts IA
-envío de mensajes
-renderizado visual
-GeminiRepository
-Encargado de:
+**AI**
+- Prompt Engineering
+- Context Injection
+- Basic Mini-RAG
 
-conexión con Gemini API
-requests HTTP usando Retrofit
-manejo de respuestas
-ChatRepository
-Encargado de:
+**PDF**
+- PdfRenderer
+- PDFBox Android
 
-guardar chats en Firestore
-recuperar historial
-PdfTextExtractor
-Extrae texto del PDF usando PDFBox.
+## 🧠 How the AI Works
 
-PdfContextHelper
-Busca fragmentos relevantes del PDF para mejorar el contexto enviado a la IA.
+The AI uses the Gemini API to generate answers related to the book the user is currently reading.
 
-⚡ Manejo de errores
-La aplicación incluye:
+The system:
 
-control de peticiones repetidas
-manejo de errores de red
-validación de contexto
-limitación de spam
-respuestas fuera de contexto
-📌 Posibles mejoras futuras
-Streaming de respuestas IA
-Embeddings reales
-RAG avanzado
-OCR para PDFs escaneados
-Búsqueda semántica
-Sincronización multiusuario
-Sistema de favoritos
-Modo offline con IA local
-👨‍💻 Autor
-Proyecto desarrollado como aplicación de lectura inteligente con integración de inteligencia artificial contextual, originado como trabajo en equipo en la universidad.
+1. Extracts text from the PDF
+2. Searches for fragments relevant to the user's question
+3. Sends specific context to Gemini
+4. Generates a context-aware answer
 
-Este repositorio es mantenido por Gabriel Ramos (GabrielProgjAV), quien desarrolló principalmente el módulo de chatbot IA: la integración con Gemini, el sistema de contexto (Mini-RAG), el historial de conversaciones en Firebase, la UI del chat y la integración con el lector de PDF.
+This produces more accurate answers and avoids generic responses.
+
+## 📄 Main Features
+
+**✅ PDF Reader**
+- Page rendering
+- Vertical scroll
+- Optimized page loading
+
+**✅ AI Chat**
+- Custom questions
+- Automatic summaries
+- Character explanations
+- Main themes
+
+**✅ Persistent History**
+- Conversations saved in Firebase
+- Automatic history retrieval
+
+**✅ Mini-RAG**
+- Basic relevant-fragment search
+- Dynamic context based on the question
+
+**✅ Modern UI**
+- Dark mode design
+- Chat bubbles
+- Auto scroll
+- Material 3 components
+
+## 🔥 Architecture Overview
+
+**ChatBottomSheet**
+Handles:
+- Chat interface
+- AI prompts
+- Message sending
+- Visual rendering
+
+**GeminiRepository**
+In charge of:
+- Connection to the Gemini API
+- HTTP requests using Retrofit
+- Response handling
+
+**ChatRepository**
+In charge of:
+- Saving chats to Firestore
+- Retrieving history
+
+**PdfTextExtractor**
+Extracts text from the PDF using PDFBox.
+
+**PdfContextHelper**
+Searches for relevant PDF fragments to improve the context sent to the AI.
+
+## ⚡ Error Handling
+
+The app includes:
+
+- Duplicate request throttling
+- Network error handling
+- Context validation
+- Spam limiting
+- Out-of-context response handling
+
+## 📌 Possible Future Improvements
+
+- AI response streaming
+- Real embeddings
+- Advanced RAG
+- OCR for scanned PDFs
+- Semantic search
+- Multi-user sync
+- Favorites system
+- Offline mode with local AI
+
+## 👨‍💻 Author
+
+This project started as a team assignment at university, built as a smart reading application with contextual AI integration.
+
+This repository is maintained by **Gabriel Ramos** ([GabrielProgjAV](https://github.com/GabrielProgjAV)), who mainly developed the AI chatbot module: the Gemini integration, the context system (Mini-RAG), the conversation history in Firebase, the chat UI, and the integration with the PDF reader.
