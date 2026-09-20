@@ -100,4 +100,6 @@ Sincronización multiusuario
 Sistema de favoritos
 Modo offline con IA local
 👨‍💻 Autor
-Proyecto desarrollado como aplicación de lectura inteligente con integración de inteligencia artificial contextual.
+Proyecto desarrollado como aplicación de lectura inteligente con integración de inteligencia artificial contextual, originado como trabajo en equipo en la universidad.
+
+Este repositorio es mantenido por Gabriel Ramos (GabrielProgjAV), quien desarrolló principalmente el módulo de chatbot IA: la integración con Gemini, el sistema de contexto (Mini-RAG), el historial de conversaciones en Firebase, la UI del chat y la integración con el lector de PDF.
